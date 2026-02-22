@@ -2,6 +2,7 @@ package com.troubleshoot.observability.global.exception;
 
 import com.troubleshoot.observability.domain.incident.Incident;
 import com.troubleshoot.observability.domain.incident.infra.IncidentRepository;
+import com.troubleshoot.observability.domain.incident.service.IncidentWriter;
 import com.troubleshoot.observability.global.logging.TraceIdFilter;
 import com.troubleshoot.observability.global.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,10 +13,10 @@ import org.springframework.web.bind.annotation.*;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final IncidentRepository incidentRepository;
+    private final IncidentWriter incidentWriter;
 
-    public GlobalExceptionHandler(IncidentRepository incidentRepository) {
-        this.incidentRepository = incidentRepository;
+    public GlobalExceptionHandler(IncidentWriter incidentWriter) {
+        this.incidentWriter = incidentWriter;
     }
 
     @ExceptionHandler(Exception.class)
@@ -34,7 +35,11 @@ public class GlobalExceptionHandler {
                 req.getRequestURI(),
                 safeMsg(e)
         );
-        incidentRepository.save(incident);
+        try {
+            incidentWriter.write(incident);
+        } catch (Exception ignored) {
+            // 예외 처리 중 저장 실패가 응답까지 깨지지 않게
+        }
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(traceId, e.getMessage()));
