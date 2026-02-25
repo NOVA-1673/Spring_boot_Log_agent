@@ -10,26 +10,50 @@ public class Incident {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 64)
+    @Column(nullable = true, length = 64)
     private String traceId;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = true, length = 32)
     private String category; // 예: DB, AUTH, VALIDATION, NPE ...
 
-    @Column(nullable = false, length = 16)
+    @Column(nullable = true, length = 16)
     private String severity; // 예: LOW/MEDIUM/HIGH
 
-    @Column(nullable = false, length = 16)
+    @Column(nullable = true, length = 16)
     private int statusCode;
 
-    @Column(nullable = false, length = 16)
+    @Column(nullable = true, length = 16)
     private String method;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = true, length = 255)
     private String path;
 
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = true, length = 2000)
     private String message;
+
+    @Column(name = "service_name", length = 100)
+    private String serviceName;
+
+    @Column(name = "signature_hash", length = 64)
+    private String signatureHash;
+
+    @Column(name = "exception_class", length = 255)
+    private String exceptionClass;
+
+    @Column(name = "first_seen_at")
+    private Instant firstSeenAt;
+
+    @Column(name = "last_seen_at")
+    private Instant lastSeenAt;
+
+    @Column(name = "occurrence_count")
+    private int occurrenceCount;
+
+    @Column(name = "primary_trace_id", length = 64)
+    private String primaryTraceId;
+
+    @Column(name = "sample_message", length = 2000)
+    private String sampleMessage;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -65,6 +89,25 @@ public class Incident {
         this.method = method;
         this.path = path;
         this.message = message;
+        this.status = IncidentStatus.OPEN;
+        this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    public Incident(String serviceName,
+                    String signatureHash,
+                    String exceptionClass,
+                    Instant occurredAt,
+                    String primaryTraceId,
+                    String sampleMessage) {
+        this.serviceName = serviceName;
+        this.signatureHash = signatureHash;
+        this.exceptionClass = exceptionClass;
+        this.firstSeenAt = occurredAt;
+        this.lastSeenAt = occurredAt;
+        this.occurrenceCount = 1;
+        this.primaryTraceId = primaryTraceId;
+        this.sampleMessage = sampleMessage;
         this.status = IncidentStatus.OPEN;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
@@ -115,9 +158,25 @@ public class Incident {
         };
     }
 
+    public void recordOccurrence(Instant occurredAt) {
+        this.occurrenceCount = this.occurrenceCount + 1;
+        if (this.lastSeenAt == null || occurredAt.isAfter(this.lastSeenAt)) {
+            this.lastSeenAt = occurredAt;
+        }
+        this.updatedAt = Instant.now();
+    }
+
     // getters (필요한 것만)
     public Long getId() { return id; }
     public IncidentStatus getStatus() { return status; }
     public String getTraceId() { return traceId; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getServiceName() { return serviceName; }
+    public String getSignatureHash() { return signatureHash; }
+    public String getExceptionClass() { return exceptionClass; }
+    public Instant getFirstSeenAt() { return firstSeenAt; }
+    public Instant getLastSeenAt() { return lastSeenAt; }
+    public int getOccurrenceCount() { return occurrenceCount; }
+    public String getPrimaryTraceId() { return primaryTraceId; }
+    public String getSampleMessage() { return sampleMessage; }
 }

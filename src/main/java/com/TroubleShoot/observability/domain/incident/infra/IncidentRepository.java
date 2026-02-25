@@ -8,4 +8,11 @@ import java.util.List;
 
 public interface IncidentRepository extends JpaRepository<Incident, Long> {
     List<Incident> findByStatusOrderByCreatedAtDesc(IncidentStatus status);
+
+    java.util.Optional<Incident> findFirstByServiceNameAndSignatureHashAndStatusAndLastSeenAtAfter(
+            String serviceName,
+            String signatureHash,
+            IncidentStatus status,
+            java.time.Instant threshold
+    );
 }
