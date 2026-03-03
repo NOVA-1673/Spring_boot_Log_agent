@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface IncidentEventRepository extends JpaRepository<IncidentEvent, Long> {
     List<IncidentEvent> findTop50ByIncidentIdOrderByOccurredAtDesc(Long incidentId);
+    List<IncidentEvent> findByIncidentIdOrderByOccurredAtAsc(Long incidentId);
 }

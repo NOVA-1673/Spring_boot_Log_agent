@@ -108,6 +108,33 @@ AI Agent 도입 기준 (의사결정 체크리스트)
       측정이 안 되면 개선도 입증할 수 없다.
 
 
+API Usage (Phase 1)
+
+1) Ingest error event
+
+POST /api/error-events
+Content-Type: application/json
+
+{
+  "serviceName": "billing",
+  "occurredAt": "2026-02-25T10:15:30Z",
+  "traceId": "trace-1",
+  "message": "boom",
+  "exceptionClass": "java.lang.IllegalStateException",
+  "stacktrace": "java.lang.IllegalStateException: boom\n\tat com.example.Billing.charge(Billing.java:10)"
+}
+
+2) List incidents
+
+GET /api/incidents
+GET /api/incidents?serviceName=billing&status=OPEN
+GET /api/incidents?from=2026-02-25T00:00:00Z&to=2026-02-26T00:00:00Z
+
+3) Get incident detail
+
+GET /api/incidents/{id}
+
+
 
 
   

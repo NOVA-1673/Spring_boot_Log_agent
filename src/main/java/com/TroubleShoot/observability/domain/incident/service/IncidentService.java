@@ -3,8 +3,10 @@ package com.troubleshoot.observability.domain.incident.service;
 import com.troubleshoot.observability.domain.incident.Incident;
 import com.troubleshoot.observability.domain.incident.IncidentStatus;
 import com.troubleshoot.observability.domain.incident.infra.IncidentRepository;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 public class IncidentService {
     private final IncidentRepository repo;
 

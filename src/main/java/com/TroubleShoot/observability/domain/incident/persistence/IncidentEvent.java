@@ -80,7 +80,23 @@ public class IncidentEvent {
         return id;
     }
 
+    public IncidentEventType getType() {
+        return type;
+    }
+
     public Instant getOccurredAt() {
         return occurredAt;
+    }
+
+    public String getTraceId() {
+        return traceId;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getNote() {
+        return note;
     }
 }
