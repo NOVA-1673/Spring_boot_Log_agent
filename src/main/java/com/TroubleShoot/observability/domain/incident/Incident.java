@@ -145,14 +145,17 @@ public class Incident {
                     || to == IncidentStatus.IGNORED);
 
             case ANALYZING -> (to == IncidentStatus.ANALYZED
-                    || to == IncidentStatus.IGNORED);
+                    || to == IncidentStatus.IGNORED
+                    || to == IncidentStatus.RESOLVED);
 
             case ANALYZED -> (to == IncidentStatus.ACKNOWLEDGED
                     || to == IncidentStatus.RESOLVED
-                    || to == IncidentStatus.IGNORED);
+                    || to == IncidentStatus.IGNORED
+                    || to == IncidentStatus.ANALYZING);
 
             case ACKNOWLEDGED -> (to == IncidentStatus.RESOLVED
-                    || to == IncidentStatus.IGNORED);
+                    || to == IncidentStatus.IGNORED
+                    || to == IncidentStatus.ANALYZING);
 
             case RESOLVED, IGNORED -> false; // 종결 상태는 더 못 감
         };

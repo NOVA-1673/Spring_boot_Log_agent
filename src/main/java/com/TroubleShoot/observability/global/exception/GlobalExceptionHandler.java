@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -18,6 +19,8 @@ public class GlobalExceptionHandler {
     public GlobalExceptionHandler(IncidentWriter incidentWriter) {
         this.incidentWriter = incidentWriter;
     }
+
+
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handle(Exception e, HttpServletRequest req) {
