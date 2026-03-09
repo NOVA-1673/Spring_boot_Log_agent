@@ -3,9 +3,10 @@ package com.troubleshoot.observability.domain.incident.analyze;
 import com.troubleshoot.observability.domain.incident.Incident;
 import com.troubleshoot.observability.domain.incident.persistence.IncidentEvent;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -47,9 +48,11 @@ public class RuleBasedIncidentAnalyzer implements IncidentAnalyzer {
         String sampleMessage = safeLower(incident.getSampleMessage());
         String eventText = safeLower(
                 events.stream()
+                        .filter(Objects::nonNull)
                         .map(IncidentEvent::getMessage)
                         .filter(this::hasText)
-                        .reduce("", (a, b) -> a + " " + b)
+                        .reduce((a, b) -> a + " " + b)
+                        .orElse("")
         );
 
         String corpus = String.join(" ", exceptionClass, sampleMessage, eventText);
@@ -94,9 +97,11 @@ public class RuleBasedIncidentAnalyzer implements IncidentAnalyzer {
 
     private List<String> buildKeyEvidence(Incident incident, List<IncidentEvent> events) {
         List<String> evidence = events.stream()
+                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(IncidentEvent::getOccurredAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
                 .map(IncidentEvent::getMessage)
                 .filter(this::hasText)
+                .map(String::trim)
                 .limit(MAX_EVIDENCE)
                 .toList();
 
@@ -112,44 +117,45 @@ public class RuleBasedIncidentAnalyzer implements IncidentAnalyzer {
     private List<String> buildRootCauses(String category) {
         return switch (category) {
             case "DB" -> List.of(
-                    "Database connection pool exhaustion",
-                    "Slow query or lock contention",
-                    "Transient database connectivity instability"
+                    "Database latency",
+                    "Connection pool exhaustion",
+                    "Query slowdown"
             );
             case "NETWORK" -> List.of(
-                    "Upstream dependency latency spike",
-                    "Network path instability or packet loss"
+                    "Upstream timeout",
+                    "Network instability",
+                    "Downstream dependency slowness"
             );
             case "APP" -> List.of(
-                    "Missing null checks in application code",
-                    "Invalid input passed to internal method",
-                    "Unhandled edge-case in business logic"
+                    "Application bug",
+                    "Invalid input handling",
+                    "Null/state handling issue"
             );
-            default -> List.of("Insufficient signal for precise root-cause classification");
+            default -> List.of("Requires manual investigation");
         };
     }
 
     private List<String> buildNextActions(String category) {
         return switch (category) {
             case "DB" -> List.of(
-                    "Check DB health metrics and active connections",
-                    "Inspect slow query and lock wait logs",
-                    "Review recent schema or index changes"
+                    "Check DB latency",
+                    "Inspect connection pool",
+                    "Review slow queries"
             );
             case "NETWORK" -> List.of(
-                    "Check upstream service latency and error rate",
-                    "Verify timeout and retry configuration",
-                    "Correlate with network infrastructure incidents"
+                    "Inspect downstream response times",
+                    "Check timeout settings",
+                    "Verify network path"
             );
             case "APP" -> List.of(
-                    "Inspect recent deploys around first seen time",
-                    "Trace failing code path using stacktrace and traceId",
-                    "Add input validation and null-safety guards",
-                    "Create regression test for the observed scenario"
+                    "Inspect stack trace",
+                    "Reproduce request flow",
+                    "Check recent code changes"
             );
             default -> List.of(
-                    "Review incident timeline and correlated logs",
-                    "Capture additional context from traces and metrics"
+                    "Inspect logs",
+                    "Review recent deploys",
+                    "Gather more evidence"
             );
         };
     }
@@ -164,7 +170,7 @@ public class RuleBasedIncidentAnalyzer implements IncidentAnalyzer {
     }
 
     private String safeLower(String value) {
-        return value == null ? "" : value.toLowerCase();
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
     private boolean hasText(String value) {

@@ -154,4 +154,27 @@ public class IncidentAnalysis {
     }
 
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public void updateFrom(
+            String category,
+            String severity,
+            String title,
+            String summary,
+            String keyEvidenceJson,
+            String suspectedRootCausesJson,
+            String nextActionsJson,
+            Instant analyzedAt,
+            String analyzerVersion
+    ) {
+        this.category = category;
+        this.severity = severity;
+        this.title = title;
+        this.summary = summary;
+        this.keyEvidenceJson = keyEvidenceJson;
+        this.suspectedRootCausesJson = suspectedRootCausesJson;
+        this.nextActionsJson = nextActionsJson;
+        this.analyzedAt = analyzedAt;
+        this.analyzerVersion = (analyzerVersion == null || analyzerVersion.isBlank()) ? "rule-v1" : analyzerVersion;
+        this.updatedAt = Instant.now();
+    }
 }
