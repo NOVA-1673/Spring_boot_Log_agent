@@ -11,10 +11,15 @@ import com.troubleshoot.observability.domain.incident.service.IncidentService;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @RestController
 public class IncidentController {
@@ -23,6 +28,8 @@ public class IncidentController {
     private final IncidentGroupingService groupingService;
     private final IncidentRepository incidentRepository;
     private final IncidentEventRepository incidentEventRepository;
+
+
 
     public IncidentController(IncidentService service,
                               IncidentGroupingService groupingService,
@@ -80,10 +87,8 @@ public class IncidentController {
 
     @GetMapping("/api/incidents/{id}")
     public ResponseEntity<IncidentDetailResponse> getIncident(@PathVariable long id) {
-        Incident incident = incidentRepository.findById(id).orElse(null);
-        if (incident == null) {
-            return ResponseEntity.notFound().build();
-        }
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "incident not found: " + id));
 
         List<IncidentEvent> events = incidentEventRepository.findByIncidentIdOrderByOccurredAtAsc(id);
 
