@@ -1,140 +1,68 @@
-1) 초기 개발 목표
-  
-  목표: Spring API 요청/오류 로그에 traceId를 부여해 요청 단위(쓰레드/흐름)로 로그를 묶는다.
-  
-  의도: 장애 발생 시점을 추적하기 쉽게 만들고,
-  그 결과를 기반으로 **“어디서 장애가 발생했는지 요약/정리”**해주는 로그 분석 에이전트를 만든다.
+# Observability Incident Analysis MVP
 
-2) 개발 중 제기된 의문
+## 개요
+이 프로젝트는 로그/에러 이벤트를 수집하고, 이를 incident 단위로 그룹핑한 뒤, 분석 결과를 저장/조회할 수 있는 Observability 실험 프로젝트이다.
 
-  단순히 로그를 요약하는 방식의 에이전트가
-  실제 업무 생산성을 의미 있게 개선하는가?
-  
-  “요약”은 데모로는 그럴듯하지만,
-  실무에서의 가치(시간 절약, 의사결정 가속, 유지보수 비용 절감)가 불명확할 수 있다.
-  
-  따라서 “로그 분석” 자체가 에이전트의 최적 문제 정의인지 재검토가 필요하다고 판단했다.
+## 현재 아키텍처
 
-3) 문제의식 확장 (근본 고찰)
+### 1. Error ingestion
+- `POST /api/error-events`
+- 에러 이벤트를 수집하고 signature 기반으로 grouping
 
-  AI agent를 도입해 자동화/효율 개선을 하려면,
-  어떤 문제 유형에 도입할 때 ROI가 나오는지에 대한 기준이 먼저 필요하다.
-  
-  즉, “무엇을 만들까?”보다
-  **“어떤 문제에 agent를 써야 이득인가?”**를 정의해야 한다.
+### 2. Incident grouping
+- 동일한 service + signatureHash 조합을 기준으로 incident 생성 또는 기존 incident에 누적
+- incident 발생 횟수(`occurrenceCount`)와 최근 발생 시각(`lastSeenAt`) 관리
 
-4) 결과적으로 도출된 다음 목표
+### 3. Incident detail
+- `GET /api/incidents/{id}`
+- incident 기본 정보와 관련 event 목록 조회
 
-  AI agent 도입 기준 수립
+### 4. Incident analysis
+- `POST /api/incidents/{id}/analyze`
+- 특정 incident를 수동 분석
+- analyzer가 분석 결과를 생성하고 DB에 저장
 
-  어떤 조건(반복성, 탐색 비용, 검증 가능성, 리스크 등)을 만족하면 agent가 유리한지
-  나만의 판단 기준을 명문화한다.
-  
-  현재 로그 기반 agent의 목표 재설계
-  
-  “로그 요약” 중심에서 끝내지 않고,
-  
-  실제 운영/유지보수에서 가치가 큰 방향으로:
-  
-  장애 대응 다음 액션 제안
-  
-  incident/ticket 초안 생성
-  
-  원인 가설 + 검증 절차(runbook) 제시
-  
-  등으로 기능 확장 및 목표 지점을 재정의한다.
+### 5. Analysis read
+- `GET /api/incidents/{id}/analysis`
+- 저장된 분석 결과 조회
 
+## 주요 구성 요소
 
+### Incident
+장애 자체를 나타내는 aggregate root  
+예: serviceName, exceptionClass, occurrenceCount, firstSeenAt, lastSeenAt, status
 
+### IncidentEvent
+incident에 연결된 개별 이벤트 기록  
+예: INCIDENT_CREATED, EVENT_INGESTED, STATUS_CHANGED
 
-AI Agent 도입 기준 (의사결정 체크리스트)
+### IncidentAnalysis
+분석 결과를 저장하는 엔티티  
+예: category, severity, title, summary, analyzedAt, analyzerVersion
 
-    1. 반복성 (Repetition)
-    
-      동일하거나 유사한 작업이 주기적으로 발생하는가?
-      사람이 매번 같은 탐색/요약/정리 과정을 반복하는가?
-      예: 장애 발생 시 항상 로그 검색 → endpoint 확인 → 가설 정리
-    
-    2. 탐색 비용 (Search Cost)
-    
-      정보가 여러 소스에 흩어져 있는가?
-      로그
-      메트릭
-      코드
-      티켓
-      문서
-      사람이 데이터를 모으는 데 시간이 많이 드는가?
-      탐색 비용이 낮다면 agent 필요성은 낮다.
+### IncidentAnalyzer
+incident를 해석해 구조화된 분석 결과를 생성하는 인터페이스
 
-    3. 정답 불확실성 (Uncertainty)
+### RuleBasedIncidentAnalyzer
+현재 사용 중인 deterministic analyzer 구현체  
+향후 LLM/AI analyzer로 교체 가능
 
-      문제에 단일 정답이 있는가?
-      → 있다면 코드로 해결 가능
-      가설을 세우고 후보를 좁히는 과정이 필요한가?
-      Agent는 “가설 탐색 문제”에 적합하다.
-      ->여러 ai model들의 장단점 파악 필요할
+### IncidentAnalysisService
+분석 유스케이스 orchestration 담당
+- incident 조회
+- events 조회
+- analyzer 호출
+- analysis 저장
+- 상태 전이
+- 상태 변경 이벤트 기록
 
-    4. 출력 형태 (Output Nature)
-    
-      실행 명령이 아니라
-      요약
-      분류
-      우선순위
-      다음 액션 제안
-      문서 초안
-      형태인가?
-      실행 자동화는 위험 관리 비용이 크다.
-    
-    5. 리스크 수준 (Risk Level)
-    
-      틀려도 사람이 검증할 수 있는가?
-      금전/보안/데이터 삭제 등 고위험 영역인가?
-      고위험 영역은:
-      → Agent는 “제안”까지만 허용
+## 설계 원칙
+- analyzer와 service의 책임 분리
+- 분석 결과 모델과 저장 엔티티 분리
+- MVP 단계에서는 deterministic rule 기반 분석 유지
+- 추후 AI/LLM analyzer로 교체 가능한 구조 유지
 
-    6. 검증 가능성 (Verifiability)
-    
-      Agent의 결과를 1~2단계 안에 확인할 수 있는가?
-      근거(traceId, 로그 링크, 메트릭 수치)를 함께 제시할 수 있는가?
-      검증 불가능한 agent는 신뢰를 잃는다.
-
-    7. 성과 측정 가능성 (Measurability)
-    
-      도입 전/후 비교가 가능한가?
-      MTTR 감소
-      로그 탐색 단계 감소
-      티켓 작성 시간 감소
-      온보딩 시간 감소
-      측정이 안 되면 개선도 입증할 수 없다.
-
-
-API Usage (Phase 1)
-
-1) Ingest error event
-
-POST /api/error-events
-Content-Type: application/json
-
-{
-  "serviceName": "billing",
-  "occurredAt": "2026-02-25T10:15:30Z",
-  "traceId": "trace-1",
-  "message": "boom",
-  "exceptionClass": "java.lang.IllegalStateException",
-  "stacktrace": "java.lang.IllegalStateException: boom\n\tat com.example.Billing.charge(Billing.java:10)"
-}
-
-2) List incidents
-
-GET /api/incidents
-GET /api/incidents?serviceName=billing&status=OPEN
-GET /api/incidents?from=2026-02-25T00:00:00Z&to=2026-02-26T00:00:00Z
-
-3) Get incident detail
-
-GET /api/incidents/{id}
-
-
-
-
-  
+## 현재 한계
+- analysis 조회 시 LAZY loading 문제 보완 필요
+- 테스트 코드 미구현
+- 자동 분석 트리거 및 리포트 기능 미구현
